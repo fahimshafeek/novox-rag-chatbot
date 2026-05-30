@@ -2,3 +2,9 @@ venv/
 .env
 __pycache__/
 *.pyc
+
+# Local Python Env
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc

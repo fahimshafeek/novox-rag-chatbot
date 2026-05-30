@@ -1,0 +1,18 @@
+{
+  "unique_key": "https://novoxedtechllp.com/placement.html",
+  "url": "https://novoxedtechllp.com/placement.html",
+  "method": "GET",
+  "payload": null,
+  "headers": {},
+  "user_data": {
+    "__crawlee": {
+      "enqueueStrategy": "same-hostname",
+      "state": 4,
+      "crawlDepth": 1
+    }
+  },
+  "retry_count": 0,
+  "no_retry": false,
+  "loaded_url": null,
+  "handled_at": "2026-05-30 09:09:52.237297+00:00"
+}

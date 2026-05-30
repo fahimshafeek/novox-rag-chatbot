@@ -1,0 +1,36 @@
+{
+  "sequence_counter": 19,
+  "forefront_sequence_counter": 0,
+  "forefront_requests": {},
+  "regular_requests": {
+    "https://novoxedtechllp.com": 0,
+    "https://novoxedtechllp.com/index.html": 1,
+    "https://novoxedtechllp.com/about.html": 2,
+    "https://novoxedtechllp.com/courses.html": 3,
+    "https://novoxedtechllp.com/instructor.html": 4,
+    "https://novoxedtechllp.com/placement.html": 5,
+    "https://novoxedtechllp.com/gallery.html": 6,
+    "https://novoxedtechllp.com/blogs.html": 7,
+    "https://novoxedtechllp.com/contact.html": 8,
+    "https://novoxedtechllp.com/mern-stack-course-detail.html": 9,
+    "https://novoxedtechllp.com/ui-ux-course-detail.html": 10,
+    "https://novoxedtechllp.com/flutter-development-course-detail.html": 11,
+    "https://novoxedtechllp.com/digital-marketing-course-detail.html": 12,
+    "https://novoxedtechllp.com/python-development-course-detail.html": 13,
+    "https://novoxedtechllp.com/graphic-design-course-detail.html": 14,
+    "https://novoxedtechllp.com/react-course-detail.html": 15,
+    "https://novoxedtechllp.com/terms-conditions.html": 16,
+    "https://novoxedtechllp.com/blog-creativity-in-tech.html": 17,
+    "https://novoxedtechllp.com/blog-marketing-insights.html": 18
+  },
+  "in_progress_requests": [],
+  "handled_requests": [
+    "https://novoxedtechllp.com/index.html",
+    "https://novoxedtechllp.com",
+    "https://novoxedtechllp.com/courses.html",
+    "https://novoxedtechllp.com/instructor.html",
+    "https://novoxedtechllp.com/gallery.html",
+    "https://novoxedtechllp.com/placement.html",
+    "https://novoxedtechllp.com/about.html"
+  ]
+}
