@@ -1,37 +1,50 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 import requests
 
 app = FastAPI(title="Novox EdTech Brain")
 
 client = QdrantClient(url="http://localhost:6333")
-collection_name = "edtech_knowledge"
+collection_name = "novox_knowledge"
 
 print("Loading embedding model...")
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 print("Model loaded successfully!")
 
 class QueryRequest(BaseModel):
     question: str
 
 @app.post("/ask")
-async def ask_bot(request: QueryRequest):
+def ask_bot(request: QueryRequest):
     # Step A: Convert user question to vector
-    query_vector = model.encode(request.question).tolist()
+    query_vector = next(model.embed([request.question])).tolist()
     
     try:
         # Step B: Retrieve context from Qdrant
         search_results = client.query_points(
             collection_name=collection_name,
             query=query_vector,
-            limit=3 
+            using="fast-bge-small-en-v1.5",
+            limit=5 
         ).points
         
-        # Step C: Enterprise Citation Upgrade (Grabs text AND source url)
-        # We use .get("url", "local-test") just in case your dummy data lacks a URL
-        retrieved_data = [{"text": hit.payload["text"], "source": hit.payload.get("url", "local-test")} for hit in search_results]
+        # Step C: Enterprise Citation Upgrade (Grabs text AND source url safely)
+        retrieved_data = []
+        for hit in search_results:
+            payload = hit.payload or {}
+            
+            # Safe extraction fallback ladder for text contents
+            text_chunk = payload.get("document") or payload.get("text") or payload.get("content") or ""
+            # Safe extraction fallback ladder for source links
+            source_url = payload.get("url") or payload.get("source") or "local-test"
+            
+            if text_chunk:
+                retrieved_data.append({
+                    "text": text_chunk, 
+                    "source": source_url
+                })
         
         # Combine just the text for the LLM to read
         context_string = "\n".join([item["text"] for item in retrieved_data])
@@ -41,7 +54,7 @@ async def ask_bot(request: QueryRequest):
 
     # Step D: Construct the Strict System Prompt
     system_prompt = f"""You are a precise, factual assistant for Novox EdTech. 
-    Answer the user's question using ONLY the provided context. Keep your answer strictly to one sentence.
+    Answer the user's question using ONLY the provided context. You may synthesize information from multiple chunks to form your answer. Keep it concise (1-3 sentences).
     If the answer is not in the context, reply exactly with: "I do not have that information."
     
     Context:
