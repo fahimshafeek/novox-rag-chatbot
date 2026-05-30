@@ -1,5 +1,5 @@
 START_URL = "https://novoxedtechllp.com/"
-MAX_REQUESTS = None  # Unlocked for full production crawl
+MAX_REQUESTS = None
 
 ADMIN_KEYWORDS = ["admin", "staff", "login", "dashboard", "internal"]
 FACULTY_KEYWORDS = ["instructors", "faculty", "teachers"]
