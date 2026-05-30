@@ -2,12 +2,17 @@ import json
 from qdrant_client import QdrantClient
 
 # Your teammate's Qdrant URL
-QDRANT_URL = "https://8aefbe5f6e3f61.lhr.life"
+QDRANT_URL = "https://00b9-2405-201-f006-80ed-9e35-78b6-dc92-e85.ngrok-free.app"
 COLLECTION_NAME = "novox_knowledge"
 
 print(f"🔌 Connecting to Qdrant server at {QDRANT_URL}...")
 # FastEmbed is automatically triggered by the QdrantClient
-client = QdrantClient(url=QDRANT_URL)
+client = QdrantClient(
+    url=QDRANT_URL,
+    port=443,  # <--- This forces Qdrant to use the correct ngrok web port
+    timeout=60.0,
+    metadata={"ngrok-skip-browser-warning": "true"}
+)
 
 def chunk_text(text, chunk_size=150):
     """Splits large page text into smaller ~150 word chunks for better RAG retrieval."""
