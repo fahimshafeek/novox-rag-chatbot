@@ -6,11 +6,15 @@ from src.extractor import extract_and_tag
 
 class NovoxCrawler:
     def __init__(self):
-        # FIX: max_concurrency must be wrapped in ConcurrencySettings for Python!
+        # FIX: Force min, desired, and max all to 1 so Crawlee doesn't crash its own validation
         self.crawler = PlaywrightCrawler(
             max_requests_per_crawl=MAX_REQUESTS, 
             headless=True,
-            concurrency_settings=ConcurrencySettings(max_concurrency=1)
+            concurrency_settings=ConcurrencySettings(
+                min_concurrency=1,
+                desired_concurrency=1,
+                max_concurrency=1
+            )
         )
         self.output_file = "scraped_data_output.jsonl"
         with open(self.output_file, "w", encoding="utf-8") as f:
