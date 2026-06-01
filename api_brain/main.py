@@ -65,6 +65,9 @@ def ask_bot(request: QueryRequest):
     # Step D: Construct the Strict System Prompt
     system_prompt = f"""You are a precise, factual assistant for Novox EdTech. 
     Answer the user's question using ONLY the provided context. You may synthesize information from multiple chunks to form your answer. Keep it concise (1-3 sentences).
+    
+    CRITICAL INSTRUCTION: Do NOT output your internal reasoning, constraints, or chunk summaries. Output ONLY the final, polished human-readable answer.
+    
     If the answer is not in the context, reply exactly with: "I do not have that information."
     
     Context:
