@@ -1,16 +1,16 @@
 import json
+import os
 from qdrant_client import QdrantClient
 
 # Your ngrok URL (ensure this is updated if your tunnel restarts)
-QDRANT_URL = "https://00b9-2405-201-f006-80ed-9e35-78b6-dc92-e85.ngrok-free.app"
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 COLLECTION_NAME = "novox_knowledge"
 
 print(f"🔌 Connecting to Qdrant server at {QDRANT_URL}...")
 client = QdrantClient(
     url=QDRANT_URL,
-    port=443,
-    timeout=60.0,
-    metadata={"ngrok-skip-browser-warning": "true"}
+    api_key=QDRANT_API_KEY
 )
 
 # CRITICAL: Force Qdrant to use the exact same ONNX model as your FastAPI backend

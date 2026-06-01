@@ -1,0 +1,44 @@
+name: Daily Novox Web Crawler & Vector Sync
+
+on:
+  schedule:
+    # Trigger automatically at 00:00 UTC (5:30 AM IST) every single day
+    - cron: '0 0 * * *'
+  # This line creates a button on the GitHub website so we can test it manually right now
+  workflow_dispatch:
+
+jobs:
+  scrape-and-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Pull your repository code onto the automated virtual machine
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    # Step 2: Set up a pristine Python environment matching your local laptop
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip' # Speeds up future runs by caching dependencies
+
+    # Step 3: Install all required project frameworks
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # Step 4: Install headless Chromium so Playwright can crawl websites in the cloud
+    - name: Set up Headless Playwright Browser
+      run: |
+        playwright install chromium --with-deps
+
+    # Step 5: Run your pipeline and securely pipe your GitHub secrets into the script
+    - name: Execute Crawler & Upload Vectors
+      env:
+        QDRANT_URL: ${{ secrets.QDRANT_URL }}
+        QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+      run: |
+        python main.py
+        python upload.py
