@@ -1,4 +1,5 @@
 import json
+import asyncio
 from crawlee import ConcurrencySettings
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
 from src.config import START_URL, MAX_REQUESTS
@@ -6,7 +7,6 @@ from src.extractor import extract_and_tag
 
 class NovoxCrawler:
     def __init__(self):
-        # FIX: Force min, desired, and max all to 1 so Crawlee doesn't crash its own validation
         self.crawler = PlaywrightCrawler(
             max_requests_per_crawl=MAX_REQUESTS, 
             headless=True,
@@ -32,7 +32,11 @@ class NovoxCrawler:
                 print(f"✅ [{processed_page['role'].upper()}] -> {url}")
                 with open(self.output_file, "a", encoding="utf-8") as f:
                     f.write(json.dumps(processed_page) + "\n")
+            
             await context.enqueue_links()
+            
+            # THE FIX: Force a hard 3-second delay so the firewall thinks we are a human reading the page!
+            await asyncio.sleep(3)
 
     async def start(self):
         self.setup_routes()
