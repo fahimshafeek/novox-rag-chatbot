@@ -3,6 +3,7 @@ qdrant-client==1.18.0
 playwright==1.60.0
 trafilatura==2.0.0
 crawlee==1.7.1
+browserforge==1.2.4
 python-dotenv==1.2.2
 pydantic==2.13.4
 pydantic-settings==2.14.1
