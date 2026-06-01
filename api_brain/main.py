@@ -3,10 +3,17 @@ from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from fastembed import TextEmbedding
 import requests
+import os
 
 app = FastAPI(title="Novox EdTech Brain")
 
-client = QdrantClient(url="http://localhost:6333")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
+
+client = QdrantClient(
+    url=QDRANT_URL,
+    api_key=QDRANT_API_KEY
+)
 collection_name = "novox_knowledge"
 
 print("Loading embedding model...")
