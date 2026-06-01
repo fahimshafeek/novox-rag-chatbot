@@ -10,6 +10,9 @@ app = FastAPI(title="Novox EdTech Brain")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 
+# Securely fetch the shiny new Gemma 4 key from Render's environment!
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 client = QdrantClient(
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY
@@ -29,7 +32,7 @@ def ask_bot(request: QueryRequest):
     query_vector = next(model.embed([request.question])).tolist()
     
     try:
-        # Step B: Retrieve context from Qdrant
+        # Step B: Retrieve context from Qdrant Cloud
         search_results = client.query_points(
             collection_name=collection_name,
             query=query_vector,
@@ -67,33 +70,35 @@ def ask_bot(request: QueryRequest):
     Context:
     {context_string}"""
 
-    # Step E: Request generation using Ollama's CHAT endpoint with Graceful Cloud Fallback
+    # Step E: Request generation using Google's Gemini API for Gemma 4 31B
     try:
-        ollama_response = requests.post(
-            "http://localhost:11434/api/chat",
-            json={
-                "model": "llama3",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": request.question}
-                ],
-                "stream": False,
-                "options": {
-                    "temperature": 0.0
-                }
-            },
-            timeout=3  # Stop hanging on Render where Ollama doesn't exist
-        )
-        ollama_response.raise_for_status()
+        # Injecting the API key dynamically into the query string
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key={GEMINI_API_KEY}"
         
-        # The JSON response structure is different for the Chat API
-        generated_answer = ollama_response.json().get("message", {}).get("content", "").strip()
+        payload = {
+            "contents": [{
+                "parts": [{"text": request.question}]
+            }],
+            "systemInstruction": {
+                "parts": [{"text": system_prompt}]
+            },
+            "generationConfig": {
+                "temperature": 0.0
+            }
+        }
+        
+        # Send the request directly to Google's servers
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        response.raise_for_status()
+        
+        # Traverse the JSON response structure for the Gemini API
+        response_data = response.json()
+        generated_answer = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
         
     except Exception as e:
-        # Graceful fallback: pipeline is fine, we are just waiting for the production cloud key
-        generated_answer = "🤖 [Pipeline Connected!] Qdrant Cloud successfully retrieved the context chunks over the internet. Real LLM text generation will activate here the absolute second your company API key is injected."
+        return {"error": f"LLM generation failed. Is the GEMINI_API_KEY set in Render? Details: {str(e)}"}
     
-    # Return the clean answer plus the exact data sources
+    # Return the clean, AI-generated answer plus the exact web sources
     return {
         "question": request.question,
         "answer": generated_answer,
