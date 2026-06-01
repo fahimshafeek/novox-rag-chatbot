@@ -5,8 +5,15 @@ from src.extractor import extract_and_tag
 
 class NovoxCrawler:
     def __init__(self):
-        self.crawler = PlaywrightCrawler(max_requests_per_crawl=MAX_REQUESTS, headless=True)
+        # FIX: Added max_concurrency=1 to prevent HTTP 429 Server bans
+        self.crawler = PlaywrightCrawler(
+            max_requests_per_crawl=MAX_REQUESTS, 
+            headless=True,
+            max_concurrency=1
+        )
         self.output_file = "scraped_data_output.jsonl"
+        
+        # Clear the file on startup
         with open(self.output_file, "w", encoding="utf-8") as f:
             pass
 
@@ -22,6 +29,7 @@ class NovoxCrawler:
                 print(f"✅ [{processed_page['role'].upper()}] -> {url}")
                 with open(self.output_file, "a", encoding="utf-8") as f:
                     f.write(json.dumps(processed_page) + "\n")
+            
             await context.enqueue_links()
 
     async def start(self):
