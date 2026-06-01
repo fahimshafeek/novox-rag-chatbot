@@ -9,7 +9,7 @@ on:
 
 jobs:
   scrape-and-sync:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     # Step 1: Pull your repository code onto the automated virtual machine
