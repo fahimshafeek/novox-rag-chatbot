@@ -5,6 +5,7 @@ from fastembed import TextEmbedding
 import requests
 import os
 import json
+import re
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -80,7 +81,6 @@ def ask_bot(request: QueryRequest):
         return {"error": f"Database search failed: {str(e)}"}
 
     # Step D: Construct the Strict System Prompt
-    # THE FIX: We explicitly demand a JSON structure to stop the CoT rambling
     system_prompt = f"""You are a precise, factual assistant for Novox EdTech. 
     Answer the user's question using ONLY the provided context. You may synthesize information from multiple chunks to form your answer. Keep it concise (1-3 sentences).
     
@@ -105,7 +105,7 @@ def ask_bot(request: QueryRequest):
             },
             "generationConfig": {
                 "temperature": 0.0,
-                "responseMimeType": "application/json" # THE FIX: Forces Google's API to only accept JSON output
+                "responseMimeType": "application/json"
             }
         }
         
@@ -113,16 +113,46 @@ def ask_bot(request: QueryRequest):
         response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
         response.raise_for_status()
         
-        # Traverse the JSON response structure for the Gemini API
         response_data = response.json()
         raw_text = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
         
-        # THE FIX: Parse the guaranteed JSON to extract just the beautiful answer
         try:
             parsed_json = json.loads(raw_text)
             generated_answer = parsed_json.get("answer", raw_text)
         except json.JSONDecodeError:
             generated_answer = raw_text.strip()
+        
+        # =========================================================================
+        # THE ULTIMATE WASH CYCLE: Programmatically clean out the scratchpad leakage
+        # =========================================================================
+        clean_lines = []
+        for line in generated_answer.split('\n'):
+            l = line.strip()
+            if not l:
+                continue
+            
+            # Skip metadata, scratchpads, and constraints lines
+            if any(marker in l for marker in ["User question:", "Context provided:", "Constraint ", "Constraint:"]):
+                continue
+            
+            # Skip chunks/lines that are just quoting context blocks in quotes
+            if l.startswith('* "') or (l.startswith('"') and l.endswith('"')):
+                continue
+                
+            # Clean up the markdown bullet points from the actual final paragraph
+            if l.startswith('* '):
+                l = l[2:]
+            elif l.startswith('*'):
+                l = l[1:]
+                
+            clean_lines.append(l.strip())
+        
+        # Reconstruct the cleaned text block
+        generated_answer = "\n".join(clean_lines).strip()
+        
+        # Strip out any redundant plaintext source URLs the model appended inside the text
+        generated_answer = re.split(r'\b(?:sources|sources:)\b', generated_answer, flags=re.IGNORECASE)[0].strip()
+        # =========================================================================
         
     except Exception as e:
         return {"error": f"LLM generation failed. Is the GEMINI_API_KEY set in Render? Details: {str(e)}"}
