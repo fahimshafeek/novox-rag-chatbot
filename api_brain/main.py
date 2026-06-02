@@ -4,8 +4,17 @@ from qdrant_client import QdrantClient
 from fastembed import TextEmbedding
 import requests
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Novox EdTech Brain")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
@@ -25,6 +34,10 @@ print("Model loaded successfully!")
 
 class QueryRequest(BaseModel):
     question: str
+
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "Novox EdTech Brain is running!"}
 
 @app.post("/ask")
 def ask_bot(request: QueryRequest):
