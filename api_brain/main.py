@@ -93,7 +93,7 @@ def ask_bot(request: QueryRequest):
     """
 
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key={GEMINI_API_KEY}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent"
         
         payload = {
             "contents": [{
@@ -108,7 +108,11 @@ def ask_bot(request: QueryRequest):
             }
         }
         
-        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY
+        }
+        response = requests.post(url, json=payload, headers=headers)
         response.raise_for_status()
         
         response_data = response.json()
@@ -150,7 +154,10 @@ def ask_bot(request: QueryRequest):
         # =========================================================================
                 
     except Exception as e:
-        return {"error": f"LLM generation failed: {str(e)}"}
+        error_msg = str(e)
+        if GEMINI_API_KEY:
+            error_msg = error_msg.replace(GEMINI_API_KEY, "********")
+        return {"error": f"LLM generation failed: {error_msg}"}
     
     return {
         "question": request.question,
