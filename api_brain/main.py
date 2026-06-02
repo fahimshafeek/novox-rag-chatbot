@@ -4,6 +4,7 @@ from qdrant_client import QdrantClient
 from fastembed import TextEmbedding
 import requests
 import os
+import json
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -79,19 +80,20 @@ def ask_bot(request: QueryRequest):
         return {"error": f"Database search failed: {str(e)}"}
 
     # Step D: Construct the Strict System Prompt
+    # THE FIX: We explicitly demand a JSON structure to stop the CoT rambling
     system_prompt = f"""You are a precise, factual assistant for Novox EdTech. 
     Answer the user's question using ONLY the provided context. You may synthesize information from multiple chunks to form your answer. Keep it concise (1-3 sentences).
     
-    CRITICAL INSTRUCTION: Do NOT output your internal reasoning, constraints, or chunk summaries. Output ONLY the final, polished human-readable answer.
+    CRITICAL INSTRUCTION: You must respond ONLY with a valid JSON object containing a single key "answer". Do not include any internal reasoning, scratchpads, constraints, or bullet points.
+    Example format: {{"answer": "Novox Edtech is a leading IT institute based in Calicut."}}
     
-    If the answer is not in the context, reply exactly with: "I do not have that information."
+    If the answer is not in the context, the "answer" value should be exactly: "I do not have that information."
     
     Context:
     {context_string}"""
 
     # Step E: Request generation using Google's Gemini API for Gemma 4 31B
     try:
-        # Injecting the API key dynamically into the query string
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key={GEMINI_API_KEY}"
         
         payload = {
@@ -102,7 +104,8 @@ def ask_bot(request: QueryRequest):
                 "parts": [{"text": system_prompt}]
             },
             "generationConfig": {
-                "temperature": 0.0
+                "temperature": 0.0,
+                "responseMimeType": "application/json" # THE FIX: Forces Google's API to only accept JSON output
             }
         }
         
@@ -114,10 +117,12 @@ def ask_bot(request: QueryRequest):
         response_data = response.json()
         raw_text = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
         
-        # Gemma 4 often outputs chain-of-thought inside <thought>...</thought> tags. 
-        # We need to strip that out so the user only sees the final answer.
-        import re
-        generated_answer = re.sub(r'<thought>.*?</thought>', '', raw_text, flags=re.DOTALL).strip()
+        # THE FIX: Parse the guaranteed JSON to extract just the beautiful answer
+        try:
+            parsed_json = json.loads(raw_text)
+            generated_answer = parsed_json.get("answer", raw_text)
+        except json.JSONDecodeError:
+            generated_answer = raw_text.strip()
         
     except Exception as e:
         return {"error": f"LLM generation failed. Is the GEMINI_API_KEY set in Render? Details: {str(e)}"}
