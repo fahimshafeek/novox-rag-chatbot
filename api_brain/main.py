@@ -112,7 +112,12 @@ def ask_bot(request: QueryRequest):
         
         # Traverse the JSON response structure for the Gemini API
         response_data = response.json()
-        generated_answer = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        raw_text = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        
+        # Gemma 4 often outputs chain-of-thought inside <thought>...</thought> tags. 
+        # We need to strip that out so the user only sees the final answer.
+        import re
+        generated_answer = re.sub(r'<thought>.*?</thought>', '', raw_text, flags=re.DOTALL).strip()
         
     except Exception as e:
         return {"error": f"LLM generation failed. Is the GEMINI_API_KEY set in Render? Details: {str(e)}"}
