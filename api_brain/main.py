@@ -76,11 +76,9 @@ def ask_bot(request: QueryRequest):
     Your ONLY job is to extract the answer from the Context and return it.
     
     RULES:
-    1. Write exactly 1 to 3 normal, professional sentences.
+    1. Write exactly 1 to 3 normal sentences.
     2. NO bullet points. NO checklists. NO quotation marks.
-    3. NEVER start your answer with "Context:", "Paragraph", or "The text says". Just answer naturally.
-    4. If the answer is NOT in the Context, you MUST output exactly: {{"answer": "I'm sorry, but I do not have that specific information available at the moment. Please reach out to the Novox EdTech administration directly for further assistance."}}
-    5. Output raw JSON format.
+    3. Output raw JSON format.
     
     EXAMPLE INPUT:
     Context: Novox is located in Calicut and teaches Python.
