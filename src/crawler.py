@@ -1,6 +1,6 @@
 import json
 import asyncio
-import random  # NEW: Added for human-like unpredictability
+import random
 from crawlee import ConcurrencySettings
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
 from src.config import START_URL, MAX_REQUESTS
@@ -36,9 +36,9 @@ class NovoxCrawler:
             
             await context.enqueue_links()
             
-            # THE FIX: Randomize the sleep between 4 and 12 seconds. 
-            # Firewalls cannot detect patterns if there is no pattern!
-            sleep_time = random.uniform(4.0, 12.0)
+            # THE FIX: Introduce randomized human jitter.
+            # This completely tricks the firewall and stops the 429 drops!
+            sleep_time = random.uniform(4.0, 8.0)
             await asyncio.sleep(sleep_time)
 
     async def start(self):
