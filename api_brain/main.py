@@ -5,6 +5,9 @@ from fastembed import TextEmbedding
 import requests
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Novox EdTech Brain")
 
