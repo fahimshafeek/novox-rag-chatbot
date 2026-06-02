@@ -80,16 +80,24 @@ def ask_bot(request: QueryRequest):
     except Exception as e:
         return {"error": f"Database search failed: {str(e)}"}
 
-    # Step D: Construct the Strict System Prompt
-    system_prompt = f"""You are a precise, factual assistant for Novox EdTech. 
-    Answer the user's question using ONLY the provided context. You may synthesize information from multiple chunks to form your answer. Keep it concise (1-3 sentences).
+    # Step D: Construct the Aggressive, Hardened System Prompt
+    system_prompt = f"""You are a strict, factual backend API that returns a single JSON object.
     
-    CRITICAL INSTRUCTION: You must respond ONLY with a valid JSON object containing a single key "answer". Do not include any internal reasoning, scratchpads, constraints, or bullet points.
-    Example format: {{"answer": "Novox Edtech is a leading IT institute based in Calicut."}}
+    Task: Answer the user's question using ONLY the provided context. Keep it to 1-3 sentences.
     
-    If the answer is not in the context, the "answer" value should be exactly: "I do not have that information."
+    ABSOLUTE PROHIBITIONS:
+    1. Do NOT repeat or quote any of the context chunks directly using quotation marks.
+    2. Do NOT list constraints, scratchpads, or your internal thought process.
+    3. Do NOT append any list of links, URLs, or text like "Sources:" at the bottom. The backend handles citations separately.
     
-    Context:
+    REQUIRED OUTPUT FORMAT:
+    You must output ONLY a valid JSON object matching this schema:
+    {{"answer": "Your clean, direct 1-3 sentence response here."}}
+    
+    If the context does not contain the answer, your JSON must be exactly:
+    {{"answer": "I do not have that information."}}
+    
+    Context data:
     {context_string}"""
 
     # Step E: Request generation using Google's Gemini API for Gemma 4 31B
@@ -123,7 +131,7 @@ def ask_bot(request: QueryRequest):
             generated_answer = raw_text.strip()
         
         # =========================================================================
-        # THE ULTIMATE WASH CYCLE: Programmatically clean out the scratchpad leakage
+        # THE FAIL-SAFE WASH: Programmatically drop quoted strings and links
         # =========================================================================
         clean_lines = []
         for line in generated_answer.split('\n'):
@@ -131,27 +139,22 @@ def ask_bot(request: QueryRequest):
             if not l:
                 continue
             
-            # Skip metadata, scratchpads, and constraints lines
-            if any(marker in l for marker in ["User question:", "Context provided:", "Constraint ", "Constraint:"]):
+            # Drop metadata or constraint markers
+            if any(m in l for m in ["User question:", "Context provided:", "Constraint", "Sources:"]):
                 continue
+                
+            # Drop any lingering raw lines that are completely wrapped in double quotes
+            if (l.startswith('"') and l.endswith('"')) or (l.startswith('**"') and l.endswith('"**')):
+                continue
+                
+            # Drop plain inline URLs if the model hallucinated any text links
+            if "https://" in l or "http://" in l:
+                continue
+                
+            clean_lines.append(l)
             
-            # Skip chunks/lines that are just quoting context blocks in quotes
-            if l.startswith('* "') or (l.startswith('"') and l.endswith('"')):
-                continue
-                
-            # Clean up the markdown bullet points from the actual final paragraph
-            if l.startswith('* '):
-                l = l[2:]
-            elif l.startswith('*'):
-                l = l[1:]
-                
-            clean_lines.append(l.strip())
-        
-        # Reconstruct the cleaned text block
-        generated_answer = "\n".join(clean_lines).strip()
-        
-        # Strip out any redundant plaintext source URLs the model appended inside the text
-        generated_answer = re.split(r'\b(?:sources|sources:)\b', generated_answer, flags=re.IGNORECASE)[0].strip()
+        # Re-synthesize into a clean single paragraph response
+        generated_answer = " ".join(clean_lines).strip()
         # =========================================================================
         
     except Exception as e:
