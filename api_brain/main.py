@@ -125,26 +125,28 @@ def ask_bot(request: QueryRequest):
         # THE ASSASSIN FILTER: Kill the bullet points if the LLM still disobeys
         # =========================================================================
         if "*" in generated_answer:
-            # Split the string by the asterisk bullet points
             chunks = [c.strip() for c in generated_answer.split('*') if c.strip()]
             valid_chunks = []
             
             for c in chunks:
-                # Kill checklist confirmations (e.g., "JSON format? Yes.")
                 if c.endswith("Yes.") or "?" in c or "Valid" in c or "Schema" in c:
                     continue
-                # Kill direct quotes wrapped in quotation marks
                 if c.startswith('"') or c.endswith('"'):
                     continue
-                # Kill literal constraint repeats
                 if "1-3 sentences" in c or "quotes" in c or "links" in c:
                     continue
                     
                 valid_chunks.append(c)
                 
-            # The actual answer is the longest surviving normal paragraph
             if valid_chunks:
                 generated_answer = max(valid_chunks, key=len)
+                
+        # =========================================================================
+        # THE GUILLOTINE: Instantly chop off the appended sources tail
+        # =========================================================================
+        # This regex looks for the word "Sources:" (even if it's prefixed by literal \n characters) 
+        # and deletes everything from that point onward.
+        generated_answer = re.split(r'(?i)(?:\\n|\n|\s)*sources?:', generated_answer)[0].strip()
         # =========================================================================
                 
     except Exception as e:
