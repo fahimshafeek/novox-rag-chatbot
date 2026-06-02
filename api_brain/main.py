@@ -155,5 +155,5 @@ def ask_bot(request: QueryRequest):
     return {
         "question": request.question,
         "answer": generated_answer,
-        "sources": retrieved_data
+        "sources": []
     }
