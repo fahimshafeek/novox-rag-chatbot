@@ -1,0 +1,142 @@
+.splash-container {
+  position: fixed;
+  inset: 0;
+  background: #0a0c10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  overflow: hidden;
+  font-family: var(--sans);
+}
+
+.cyber-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  perspective: 1000px;
+  transform: rotateX(60deg) translateY(-200px);
+  opacity: 0.3;
+  z-index: 1;
+}
+
+.logo-wrapper {
+  position: relative;
+  width: 400px; /* Square container for perfect 45deg diagonal */
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.logo-half {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.8s ease;
+}
+
+/* Initial state: Perfect Diagonal Corners (Top-Right and Bottom-Left) */
+.phase-joining .top-half {
+  transform: translate(100vw, -100vh);
+  opacity: 0;
+}
+
+.phase-joining .bottom-half {
+  transform: translate(-100vw, 100vh);
+  opacity: 0;
+}
+
+/* Showing: Joined in the center */
+.phase-showing .top-half,
+.phase-showing .bottom-half {
+  transform: translate(0, 0);
+  opacity: 1;
+}
+
+/* Precision Diagonal Split Exit (Exiting perfectly along the 45deg axis) */
+.phase-splitting .top-half,
+.phase-zooming .top-half,
+.phase-migrating .top-half {
+  transform: translate(300px, -300px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.phase-splitting .bottom-half,
+.phase-zooming .bottom-half,
+.phase-migrating .bottom-half {
+  transform: translate(-300px, 300px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-logo-img {
+  width: 80%; /* Ensure it fits well within the square */
+  height: 80%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 15px rgba(0, 71, 171, 0.3));
+}
+
+/* Perfect 45-Degree Diagonal Cut (Top-Left to Bottom-Right) */
+.top-half {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.bottom-half {
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+}
+
+/* Avatar Migration */
+.avatar-migration-container {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.phase-zooming .avatar-migration-container {
+  animation: energeticPopOut 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes energeticPopOut {
+  0% { transform: scale(0); opacity: 0; filter: brightness(2) blur(10px); }
+  70% { transform: scale(1.1); opacity: 1; filter: brightness(1.5) blur(0px); }
+  100% { transform: scale(1); opacity: 1; filter: brightness(1) blur(0px); }
+}
+
+.phase-migrating .avatar-migration-container {
+  bottom: 40px;
+  right: 40px;
+  top: auto;
+  left: auto;
+  width: 75px;
+  height: 75px;
+  transform: translate(0, 0);
+}
+
+.splash-avatar-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 15px var(--mecha-cyan));
+}
+
+@keyframes fadeOutSplash {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+.splash-container.complete {
+  animation: fadeOutSplash 0.5s forwards;
+}
