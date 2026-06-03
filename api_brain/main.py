@@ -80,7 +80,10 @@ def ask_bot(request: QueryRequest):
     2. Write exactly 1 to 3 natural, professional sentences.
     3. NEVER use meta-phrases like "Context:", "Result:", "The text mentions", or "Paragraph". Just give the direct answer.
     4. NO bullet points, checklists, or quotation marks.
-    5. MISSING INFO: If the answer is NOT in the Context, you must return exactly this: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
+    5. MISSING INFO: If the answer cannot be reasonably deduced from the Context, you must return exactly this: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
+    
+    GUIDELINES:
+    - Be highly deductive. If the context strongly implies the answer (e.g., "Novox Edtech | Best Software Training"), deduce that Novox is a software training institute.
     
     EXAMPLE 1 (Found in Context):
     Context: Novox is located in Calicut.
