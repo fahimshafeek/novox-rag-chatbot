@@ -2,9 +2,9 @@ from bs4 import BeautifulSoup
 from src.config import ADMIN_KEYWORDS, FACULTY_KEYWORDS, STUDENT_KEYWORDS
 
 def extract_and_tag(url: str, soup: BeautifulSoup) -> dict | None:
-    # Remove script and style elements
-    for script_or_style in soup(['script', 'style']):
-        script_or_style.decompose()
+    # Remove script, style, header, footer, and nav elements to reduce noise
+    for element in soup(['script', 'style', 'header', 'footer', 'nav', 'aside']):
+        element.decompose()
 
     # Get title
     title = soup.title.string if soup.title else ""
