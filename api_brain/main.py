@@ -70,22 +70,27 @@ def ask_bot(request: QueryRequest):
         return {"error": f"Database search failed: {str(e)}"}
 
     # =========================================================================
-    # THE FEW-SHOT NUCLEAR PROMPT
+    # THE TWO-SHOT NUCLEAR PROMPT
     # =========================================================================
-    system_prompt = f"""You are an AI assistant for Novox EdTech.
-    Your ONLY job is to extract the answer from the Context and return it.
+    system_prompt = f"""You are the professional AI assistant for Novox EdTech.
+    Your ONLY job is to extract the answer from the Context.
     
-    RULES:
-    1. Write exactly 1 to 3 normal sentences.
-    2. NO bullet points. NO checklists. NO quotation marks.
-    3. Output raw JSON format.
+    CRITICAL RULES:
+    1. Output MUST be valid JSON with a single key "answer".
+    2. Write exactly 1 to 3 natural, professional sentences.
+    3. NEVER use meta-phrases like "Context:", "Result:", "The text mentions", or "Paragraph". Just give the direct answer.
+    4. NO bullet points, checklists, or quotation marks.
+    5. MISSING INFO: If the answer is NOT in the Context, you must return exactly this: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
     
-    EXAMPLE INPUT:
-    Context: Novox is located in Calicut and teaches Python.
+    EXAMPLE 1 (Found in Context):
+    Context: Novox is located in Calicut.
     Question: Where is Novox?
+    Output: {{"answer": "Novox EdTech is located in Calicut."}}
     
-    EXAMPLE EXACT OUTPUT:
-    {{"answer": "Novox is located in Calicut and offers courses in Python."}}
+    EXAMPLE 2 (Not Found in Context):
+    Context: Novox teaches Python.
+    Question: Who is the CEO?
+    Output: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
     
     REAL INPUT:
     Context:
@@ -148,9 +153,19 @@ def ask_bot(request: QueryRequest):
         # =========================================================================
         # THE GUILLOTINE: Instantly chop off the appended sources tail
         # =========================================================================
-        # This regex looks for the word "Sources:" (even if it's prefixed by literal \n characters) 
-        # and deletes everything from that point onward.
         generated_answer = re.split(r'(?i)(?:\\n|\n|\s)*sources?:', generated_answer)[0].strip()
+        
+        # =========================================================================
+        # THE DECAPITATOR: Chop off hallucinated meta-prefixes at the start
+        # =========================================================================
+        # Strips out prefixes like "Context:", "Result:", "Answer:"
+        generated_answer = re.sub(r'^(?i)(context|result|answer|paragraph \d+):\s*', '', generated_answer).strip()
+        # Strips out conversational crutches like "The text mentions that"
+        generated_answer = re.sub(r'^(?i)the text (mentions|says|states)( that)?\s*', '', generated_answer).strip()
+        
+        # Capitalize the first letter since we might have just chopped off the start of the sentence
+        if generated_answer:
+            generated_answer = generated_answer[0].upper() + generated_answer[1:]
         # =========================================================================
                 
     except Exception as e:
