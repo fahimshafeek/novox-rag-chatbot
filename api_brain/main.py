@@ -43,16 +43,40 @@ class QueryRequest(BaseModel):
 def health_check():
     return {"status": "ok", "message": "Novox EdTech Brain is running!"}
 
+# Simple Semantic Cache to store (vector, response_dict) pairs
+semantic_cache = []
+
+def cosine_similarity(v1, v2):
+    dot = sum(a * b for a, b in zip(v1, v2))
+    mag1 = sum(a * a for a in v1) ** 0.5
+    mag2 = sum(b * b for b in v2) ** 0.5
+    if mag1 * mag2 == 0:
+        return 0
+    return dot / (mag1 * mag2)
+
 @app.post("/ask")
 def ask_bot(request: QueryRequest):
     query_vector = next(model.embed([request.question])).tolist()
     
+    # =========================================================================
+    # OPTIMIZATION STAGE 1: SEMANTIC CACHE (0 Tokens Used)
+    # =========================================================================
+    # Check if a very similar question was recently asked
+    for cached_vector, cached_response in semantic_cache:
+        if cosine_similarity(query_vector, cached_vector) > 0.94:
+            print("🚀 Semantic Cache Hit! Saved 100% of LLM Tokens.")
+            return cached_response
+
     try:
+        # =========================================================================
+        # OPTIMIZATION STAGE 2: STRICTER RETRIEVAL (70% Token Reduction)
+        # =========================================================================
+        # Reduced limit from 10 to 3. Since data is clean, top 3 chunks are enough.
         search_results = client.query_points(
             collection_name=collection_name,
             query=query_vector,
             using="fast-bge-small-en-v1.5",
-            limit=10 
+            limit=3 
         ).points
         
         retrieved_data = []
@@ -172,8 +196,15 @@ def ask_bot(request: QueryRequest):
     
     unique_sources = [{"source": src} for src in list(set([item["source"] for item in retrieved_data if item["source"] != "local-test"]))] if 'retrieved_data' in locals() else []
     
-    return {
+    final_response = {
         "question": request.question,
         "answer": generated_answer,
         "sources": unique_sources
     }
+    
+    # Save to semantic cache for future similar questions (keep max 1000 items to avoid memory leak)
+    if len(semantic_cache) > 1000:
+        semantic_cache.pop(0)
+    semantic_cache.append((query_vector, final_response))
+    
+    return final_response
