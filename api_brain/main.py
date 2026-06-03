@@ -101,7 +101,7 @@ def ask_bot(request: QueryRequest):
     
     CRITICAL RULES:
     1. Output MUST be valid JSON with a single key "answer".
-    2. Write a comprehensive, detailed, and professional paragraph (3 to 6 sentences) answering the user's question completely.
+    2. Be concise but informative. Tailor the length of your answer to the complexity of the question (usually 1 to 4 sentences). Do not pad your answer with unnecessary fluff.
     3. NEVER use meta-phrases like "Context:", "Result:", "The text mentions", or "Paragraph". Just give the direct answer.
     4. NO bullet points, checklists, or quotation marks.
     5. NEVER include any URLs, website links, or "Click here to learn more" links in your answer.
@@ -137,7 +137,14 @@ def ask_bot(request: QueryRequest):
             },
             "generationConfig": {
                 "temperature": 0.0,
-                "responseMimeType": "application/json"
+                "responseMimeType": "application/json",
+                "responseSchema": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "answer": {"type": "STRING", "description": "The final answer to the user's question."}
+                    },
+                    "required": ["answer"]
+                }
             }
         }
         
