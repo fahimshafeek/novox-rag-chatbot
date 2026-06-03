@@ -2,15 +2,14 @@ import json
 import asyncio
 import random
 from crawlee import ConcurrencySettings
-from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
+from crawlee.crawlers import BeautifulSoupCrawler, BeautifulSoupCrawlingContext
 from src.config import START_URL, MAX_REQUESTS
 from src.extractor import extract_and_tag
 
 class NovoxCrawler:
     def __init__(self):
-        self.crawler = PlaywrightCrawler(
-            max_requests_per_crawl=MAX_REQUESTS, 
-            headless=True,
+        self.crawler = BeautifulSoupCrawler(
+            max_requests_per_crawl=MAX_REQUESTS,
             concurrency_settings=ConcurrencySettings(
                 min_concurrency=1,
                 desired_concurrency=1,
@@ -23,11 +22,9 @@ class NovoxCrawler:
 
     def setup_routes(self):
         @self.crawler.router.default_handler
-        async def request_handler(context: PlaywrightCrawlingContext) -> None:
+        async def request_handler(context: BeautifulSoupCrawlingContext) -> None:
             url = context.request.url
-            await context.page.wait_for_load_state("networkidle")
-            html = await context.page.content()
-            processed_page = extract_and_tag(url, html)
+            processed_page = extract_and_tag(url, context.soup)
             
             if processed_page:
                 print(f"✅ [{processed_page['role'].upper()}] -> {url}")
@@ -36,13 +33,12 @@ class NovoxCrawler:
             
             await context.enqueue_links()
             
-            # THE FIX: Introduce randomized human jitter.
-            # This completely tricks the firewall and stops the 429 drops!
-            sleep_time = random.uniform(4.0, 8.0)
+            # Keep the randomized human jitter to avoid being blocked.
+            sleep_time = random.uniform(2.0, 5.0) # Slightly reduced as HTTP is faster than browser
             await asyncio.sleep(sleep_time)
 
     async def start(self):
         self.setup_routes()
-        print(f"🚀 Starting Playwright crawl at: {START_URL}")
+        print(f"🚀 Starting BeautifulSoup crawl at: {START_URL}")
         await self.crawler.run([START_URL])
         print(f"\n🎉 Done! Check '{self.output_file}'.")
