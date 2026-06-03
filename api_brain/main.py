@@ -184,7 +184,7 @@ def ask_bot(request: QueryRequest):
             error_msg = error_msg.replace(GEMINI_API_KEY, "********")
         return {"error": f"LLM generation failed: {error_msg}"}
     
-    unique_sources = list(set([item["source"] for item in retrieved_data if item["source"] != "local-test"])) if 'retrieved_data' in locals() else []
+    unique_sources = [{"source": src} for src in list(set([item["source"] for item in retrieved_data if item["source"] != "local-test"]))] if 'retrieved_data' in locals() else []
     
     return {
         "question": request.question,
