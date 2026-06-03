@@ -70,9 +70,9 @@ const Chatbot: React.FC = () => {
       }
       
       let botResponseText = data.answer;
+      // Optional: Log sources to console instead of displaying them to the user
       if (data.sources && data.sources.length > 0) {
-        const sourcesText = data.sources.map((s: any, idx: number) => `[${idx + 1}] ${s.source}`).join('\\n');
-        botResponseText += `\\n\\nSources:\\n${sourcesText}`;
+        console.log("Sources:", data.sources);
       }
       
       setMessages((prev) => [...prev, { text: botResponseText, isBot: true }]);

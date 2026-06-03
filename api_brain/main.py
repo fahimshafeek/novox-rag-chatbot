@@ -80,7 +80,8 @@ def ask_bot(request: QueryRequest):
     2. Write a comprehensive, detailed, and professional paragraph (3 to 6 sentences) answering the user's question completely.
     3. NEVER use meta-phrases like "Context:", "Result:", "The text mentions", or "Paragraph". Just give the direct answer.
     4. NO bullet points, checklists, or quotation marks.
-    5. MISSING INFO: If the answer cannot be reasonably deduced from the Context, you must return exactly this: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
+    5. NEVER include any URLs, website links, or "Click here to learn more" links in your answer.
+    6. MISSING INFO: If the answer cannot be reasonably deduced from the Context, you must return exactly this: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
     
     GUIDELINES:
     - Be highly deductive. If the context strongly implies the answer (e.g., "Novox Edtech | Best Software Training"), deduce that Novox is a software training institute.
@@ -101,7 +102,7 @@ def ask_bot(request: QueryRequest):
     """
 
     try:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
         
         payload = {
             "contents": [{
