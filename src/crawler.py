@@ -3,12 +3,14 @@ import asyncio
 import random
 from crawlee import ConcurrencySettings
 from crawlee.crawlers import BeautifulSoupCrawler, BeautifulSoupCrawlingContext
+from crawlee.http_clients import CurlImpersonateHttpClient
 from src.config import START_URL, MAX_REQUESTS
 from src.extractor import extract_and_tag
 
 class NovoxCrawler:
     def __init__(self):
         self.crawler = BeautifulSoupCrawler(
+            http_client=CurlImpersonateHttpClient(),
             max_requests_per_crawl=MAX_REQUESTS,
             concurrency_settings=ConcurrencySettings(
                 min_concurrency=1,
