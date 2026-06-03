@@ -30,9 +30,7 @@ jobs:
         pip install -r requirements.txt
 
     # Step 4: Install headless Chromium so Playwright can crawl websites in the cloud
-    - name: Set up Headless Playwright Browser
-      run: |
-        playwright install chromium --with-deps
+    
 
     # Step 5: Run your pipeline and securely pipe your GitHub secrets into the script
     - name: Execute Crawler & Upload Vectors
