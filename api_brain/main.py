@@ -52,7 +52,7 @@ def ask_bot(request: QueryRequest):
             collection_name=collection_name,
             query=query_vector,
             using="fast-bge-small-en-v1.5",
-            limit=5 
+            limit=10 
         ).points
         
         retrieved_data = []
@@ -77,7 +77,7 @@ def ask_bot(request: QueryRequest):
     
     CRITICAL RULES:
     1. Output MUST be valid JSON with a single key "answer".
-    2. Write exactly 1 to 3 natural, professional sentences.
+    2. Write a comprehensive, detailed, and professional paragraph (3 to 6 sentences) answering the user's question completely.
     3. NEVER use meta-phrases like "Context:", "Result:", "The text mentions", or "Paragraph". Just give the direct answer.
     4. NO bullet points, checklists, or quotation marks.
     5. MISSING INFO: If the answer cannot be reasonably deduced from the Context, you must return exactly this: {{"answer": "I do not have that specific information available at the moment. Please contact Novox EdTech directly."}}
@@ -143,25 +143,7 @@ def ask_bot(request: QueryRequest):
         except json.JSONDecodeError:
             generated_answer = raw_text
             
-        # =========================================================================
-        # THE ASSASSIN FILTER: Kill the bullet points if the LLM still disobeys
-        # =========================================================================
-        if "*" in generated_answer:
-            chunks = [c.strip() for c in generated_answer.split('*') if c.strip()]
-            valid_chunks = []
-            
-            for c in chunks:
-                if c.endswith("Yes.") or "?" in c or "Valid" in c or "Schema" in c:
-                    continue
-                if c.startswith('"') or c.endswith('"'):
-                    continue
-                if "1-3 sentences" in c or "quotes" in c or "links" in c:
-                    continue
-                    
-                valid_chunks.append(c)
-                
-            if valid_chunks:
-                generated_answer = max(valid_chunks, key=len)
+        # (Removed Assassin Filter to allow for longer and detailed responses)
                 
         # =========================================================================
         # THE GUILLOTINE: Instantly chop off the appended sources tail
