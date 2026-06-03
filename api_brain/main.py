@@ -159,9 +159,9 @@ def ask_bot(request: QueryRequest):
         # THE DECAPITATOR: Chop off hallucinated meta-prefixes at the start
         # =========================================================================
         # Strips out prefixes like "Context:", "Result:", "Answer:"
-        generated_answer = re.sub(r'^(?i)(context|result|answer|paragraph \d+):\s*', '', generated_answer).strip()
+        generated_answer = re.sub(r'(?i)^(context|result|answer|paragraph \d+):\s*', '', generated_answer).strip()
         # Strips out conversational crutches like "The text mentions that"
-        generated_answer = re.sub(r'^(?i)the text (mentions|says|states)( that)?\s*', '', generated_answer).strip()
+        generated_answer = re.sub(r'(?i)^the text (mentions|says|states)( that)?\s*', '', generated_answer).strip()
         
         # Capitalize the first letter since we might have just chopped off the start of the sentence
         if generated_answer:
