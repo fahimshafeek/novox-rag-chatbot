@@ -2,16 +2,21 @@ import json
 import os
 from qdrant_client import QdrantClient
 
-# Your ngrok URL (ensure this is updated if your tunnel restarts)
+# Your Qdrant Cloud URL (configured in GitHub Secrets)
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 COLLECTION_NAME = "novox_knowledge"
 
 print(f"🔌 Connecting to Qdrant server at {QDRANT_URL}...")
-client = QdrantClient(
-    url=QDRANT_URL,
-    api_key=QDRANT_API_KEY
-)
+try:
+    client = QdrantClient(
+        url=QDRANT_URL,
+        api_key=QDRANT_API_KEY,
+    )
+except Exception as e:
+    print(f"❌ Failed to connect to Qdrant at {QDRANT_URL}.")
+    print("Please double check that your QDRANT_URL and QDRANT_API_KEY secrets in GitHub Actions are correct.")
+    raise e
 
 # CRITICAL: Force Qdrant to use the exact same ONNX model as your FastAPI backend
 client.set_model("BAAI/bge-small-en-v1.5")
@@ -50,9 +55,15 @@ def process_and_upload():
 
     # CRITICAL: Prevent duplicate data by wiping the collection if it already exists
     print("🧹 Checking for existing database...")
-    if client.collection_exists(collection_name=COLLECTION_NAME):
-        print(f"🗑️ Deleting old '{COLLECTION_NAME}' collection to prevent duplicate chunks...")
-        client.delete_collection(collection_name=COLLECTION_NAME)
+    try:
+        if client.collection_exists(collection_name=COLLECTION_NAME):
+            print(f"🗑️ Deleting old '{COLLECTION_NAME}' collection to prevent duplicate chunks...")
+            client.delete_collection(collection_name=COLLECTION_NAME)
+    except Exception as e:
+        print("\n❌ ERROR: Failed to communicate with Qdrant.")
+        print("This usually happens if your QDRANT_URL or QDRANT_API_KEY is incorrect or outdated.")
+        print("Please check your GitHub Secrets to ensure you are using the correct Qdrant Cloud URL.\n")
+        raise e
 
     print(f"🚀 Vectorizing and uploading {len(documents)} chunks to Qdrant...")
     print("(Note: It may take a moment to download the lightweight embedding model on the first run)")
