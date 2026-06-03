@@ -101,7 +101,7 @@ def ask_bot(request: QueryRequest):
     
     CRITICAL RULES:
     1. Output MUST be valid JSON with a single key "answer".
-    2. Be concise but informative. Tailor the length of your answer to the complexity of the question (usually 1 to 4 sentences). Do not pad your answer with unnecessary fluff.
+    2. Be friendly, conversational, and enthusiastic! Speak like a welcoming human assistant at Novox EdTech. Give sufficiently detailed answers that are helpful and engaging, rather than just cold facts. Feel free to use appropriate emojis.
     3. NEVER use meta-phrases like "Context:", "Result:", "The text mentions", or "Paragraph". Just give the direct answer.
     4. NO bullet points, checklists, or quotation marks.
     5. NEVER include any URLs, website links, or "Click here to learn more" links in your answer.
@@ -113,7 +113,7 @@ def ask_bot(request: QueryRequest):
     EXAMPLE 1 (Found in Context):
     Context: Novox is located in Calicut.
     Question: Where is Novox?
-    Output: {{"answer": "Novox EdTech is located in Calicut."}}
+    Output: {{"answer": "Novox EdTech is located right here in Calicut! 🏢 We'd love for you to drop by."}}
     
     EXAMPLE 2 (Not Found in Context):
     Context: Novox teaches Python.
@@ -126,7 +126,7 @@ def ask_bot(request: QueryRequest):
     """
 
     try:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent"
         
         payload = {
             "contents": [{
