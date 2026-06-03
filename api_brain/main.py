@@ -121,7 +121,17 @@ def ask_bot(request: QueryRequest):
         response.raise_for_status()
         
         response_data = response.json()
-        raw_text = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        parts = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        
+        raw_text = ""
+        for part in parts:
+            if not part.get("thought", False):
+                raw_text = part.get("text", "").strip()
+                break
+                
+        # Fallback if no non-thought part is found
+        if not raw_text and parts:
+            raw_text = parts[-1].get("text", "").strip()
         
         # Parse JSON
         try:
@@ -174,8 +184,10 @@ def ask_bot(request: QueryRequest):
             error_msg = error_msg.replace(GEMINI_API_KEY, "********")
         return {"error": f"LLM generation failed: {error_msg}"}
     
+    unique_sources = list(set([item["source"] for item in retrieved_data if item["source"] != "local-test"])) if 'retrieved_data' in locals() else []
+    
     return {
         "question": request.question,
         "answer": generated_answer,
-        "sources": []
+        "sources": unique_sources
     }
