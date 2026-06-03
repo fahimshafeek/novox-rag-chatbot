@@ -26,14 +26,16 @@ class NovoxCrawler:
         @self.crawler.router.default_handler
         async def request_handler(context: BeautifulSoupCrawlingContext) -> None:
             url = context.request.url
+            
+            # CRITICAL: Enqueue links BEFORE decomposing the nav/header/footer tags
+            await context.enqueue_links()
+            
             processed_page = extract_and_tag(url, context.soup)
             
             if processed_page:
                 print(f"✅ [{processed_page['role'].upper()}] -> {url}")
                 with open(self.output_file, "a", encoding="utf-8") as f:
                     f.write(json.dumps(processed_page) + "\n")
-            
-            await context.enqueue_links()
             
             # Keep the randomized human jitter to avoid being blocked.
             sleep_time = random.uniform(2.0, 5.0) # Slightly reduced as HTTP is faster than browser
