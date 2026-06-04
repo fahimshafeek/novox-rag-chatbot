@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
-from fastembed import TextEmbedding
+
 import requests
 import os
 import json
@@ -32,9 +32,16 @@ client = QdrantClient(
 )
 collection_name = "novox_knowledge"
 
-print("Loading embedding model...")
-model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
-print("Model loaded successfully!")
+print("Using Google Gemini API for Embeddings...")
+def get_gemini_embedding(text: str) -> list[float]:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
+    payload = {
+        "model": "models/text-embedding-004",
+        "content": {"parts": [{"text": text}]}
+    }
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
+    return response.json().get("embedding", {}).get("values", [])
 
 class QueryRequest(BaseModel):
     question: str
@@ -56,7 +63,10 @@ def cosine_similarity(v1, v2):
 
 @app.post("/ask")
 def ask_bot(request: QueryRequest):
-    query_vector = next(model.embed([request.question])).tolist()
+    try:
+        query_vector = get_gemini_embedding(request.question)
+    except Exception as e:
+        return {"error": f"Failed to generate embedding: {str(e)}"}
     
     # =========================================================================
     # OPTIMIZATION STAGE 1: SEMANTIC CACHE (0 Tokens Used)
@@ -71,11 +81,9 @@ def ask_bot(request: QueryRequest):
         # =========================================================================
         # OPTIMIZATION STAGE 2: STRICTER RETRIEVAL (70% Token Reduction)
         # =========================================================================
-        # Reduced limit from 10 to 3. Since data is clean, top 3 chunks are enough.
         search_results = client.query_points(
             collection_name=collection_name,
             query=query_vector,
-            using="fast-bge-small-en-v1.5",
             limit=3 
         ).points
         

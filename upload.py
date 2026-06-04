@@ -1,11 +1,19 @@
 import json
 import os
 from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+import requests
+import uuid
+import time
 
 # Your Qdrant Cloud URL (configured in GitHub Secrets)
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 COLLECTION_NAME = "novox_knowledge"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
 
 print(f"🔌 Connecting to Qdrant server at {QDRANT_URL}...")
 try:
@@ -18,9 +26,7 @@ except Exception as e:
     print("Please double check that your QDRANT_URL and QDRANT_API_KEY secrets in GitHub Actions are correct.")
     raise e
 
-# CRITICAL: Force Qdrant to use the exact same ONNX model as your FastAPI backend
-client.set_model("BAAI/bge-small-en-v1.5")
-
+# Removed FastEmbed initialization. Using Google Gemini API.
 def chunk_text(text, chunk_size=150):
     """Splits large page text into smaller ~150 word chunks for better RAG retrieval."""
     words = text.split()
@@ -65,14 +71,56 @@ def process_and_upload():
         print("Please check your GitHub Secrets to ensure you are using the correct Qdrant Cloud URL.\n")
         raise e
 
-    print(f"🚀 Vectorizing and uploading {len(documents)} chunks to Qdrant...")
-    print("(Note: It may take a moment to download the lightweight embedding model on the first run)")
+    print(f"🚀 Vectorizing {len(documents)} chunks using Google Gemini Embeddings...")
     
-    # client.add() automatically creates the collection, embeds the text, and uploads it!
-    client.add(
+    # Create the collection with Google's embedding size (768)
+    client.create_collection(
         collection_name=COLLECTION_NAME,
-        documents=documents,
-        metadata=metadata
+        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+    )
+    
+    points = []
+    BATCH_SIZE = 50
+    for i in range(0, len(documents), BATCH_SIZE):
+        batch_docs = documents[i:i+BATCH_SIZE]
+        batch_meta = metadata[i:i+BATCH_SIZE]
+        
+        requests_payload = [{"model": "models/text-embedding-004", "content": {"parts": [{"text": doc}]}} for doc in batch_docs]
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={GEMINI_API_KEY}"
+        
+        # Add retry logic for robustness
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json={"requests": requests_payload})
+                response.raise_for_status()
+                break
+            except Exception as e:
+                if attempt == 2:
+                    raise e
+                print(f"⚠️ Rate limited by Gemini API, retrying in 10s... (Attempt {attempt+1}/3)")
+                time.sleep(10)
+        
+        embeddings = [item["values"] for item in response.json().get("embeddings", [])]
+        
+        for j, emb in enumerate(embeddings):
+            payload_data = {"document": batch_docs[j]}
+            payload_data.update(batch_meta[j])
+            points.append(
+                PointStruct(
+                    id=str(uuid.uuid4()), 
+                    vector=emb, 
+                    payload=payload_data
+                )
+            )
+            
+        time.sleep(1.5) # Gentle pause to respect Google API limits
+        print(f"✅ Processed {min(i+BATCH_SIZE, len(documents))}/{len(documents)} chunks...")
+
+    print(f"🚀 Uploading {len(points)} vectors to Qdrant...")
+    # Upsert all points into Qdrant
+    client.upsert(
+        collection_name=COLLECTION_NAME,
+        points=points
     )
     
     print("\n✅ Upload Complete! Your data is now live on the host server.")
