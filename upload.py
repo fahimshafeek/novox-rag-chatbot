@@ -59,25 +59,40 @@ def process_and_upload():
                         "role": role
                     })
 
-    # CRITICAL: Prevent duplicate data by wiping the collection if it already exists
     print("🧹 Checking for existing database...")
     try:
-        if client.collection_exists(collection_name=COLLECTION_NAME):
-            print(f"🗑️ Deleting old '{COLLECTION_NAME}' collection to prevent duplicate chunks...")
-            client.delete_collection(collection_name=COLLECTION_NAME)
+        if not client.collection_exists(collection_name=COLLECTION_NAME):
+            print(f"🆕 Creating new '{COLLECTION_NAME}' collection...")
+            client.create_collection(
+                collection_name=COLLECTION_NAME,
+                vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
+            )
+        else:
+            print(f"🔄 Database exists. Preparing for incremental update...")
     except Exception as e:
         print("\n❌ ERROR: Failed to communicate with Qdrant.")
         print("This usually happens if your QDRANT_URL or QDRANT_API_KEY is incorrect or outdated.")
         print("Please check your GitHub Secrets to ensure you are using the correct Qdrant Cloud URL.\n")
         raise e
 
-    print(f"🚀 Vectorizing {len(documents)} chunks using Google Gemini Embeddings...")
-    
-    # Create the collection with Google's gemini-embedding-2 size (3072)
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
-    )
+    # SMART INCREMENTAL UPDATE: Delete old data ONLY for pages we successfully scraped
+    # This ensures if the crawler crashes halfway, we don't lose the rest of the database!
+    unique_urls = list(set(meta["url"] for meta in metadata if "url" in meta))
+    if unique_urls:
+        print(f"🗑️ Deleting old data for {len(unique_urls)} updated pages to prevent duplicates...")
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        for url in unique_urls:
+            client.delete(
+                collection_name=COLLECTION_NAME,
+                points_selector=Filter(
+                    must=[
+                        FieldCondition(
+                            key="url",
+                            match=MatchValue(value=url)
+                        )
+                    ]
+                )
+            )
     
     points = []
     BATCH_SIZE = 50 # Reduced from 100 to avoid triggering burst limits
