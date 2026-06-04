@@ -37,8 +37,9 @@ class NovoxCrawler:
                 with open(self.output_file, "a", encoding="utf-8") as f:
                     f.write(json.dumps(processed_page) + "\n")
             
-            # Keep the randomized human jitter to avoid being blocked.
-            sleep_time = random.uniform(2.0, 5.0) # Slightly reduced as HTTP is faster than browser
+            # Keep the randomized human jitter to avoid being blocked by StackCDN.
+            # Increased to 5-8 seconds because the CDN rate limits after ~50 rapid requests
+            sleep_time = random.uniform(5.0, 8.0) 
             await asyncio.sleep(sleep_time)
 
     async def start(self):

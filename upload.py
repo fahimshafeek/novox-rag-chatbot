@@ -80,7 +80,7 @@ def process_and_upload():
     )
     
     points = []
-    BATCH_SIZE = 50
+    BATCH_SIZE = 100 # Maximum allowed by Gemini batch API
     for i in range(0, len(documents), BATCH_SIZE):
         batch_docs = documents[i:i+BATCH_SIZE]
         batch_meta = metadata[i:i+BATCH_SIZE]
@@ -113,7 +113,7 @@ def process_and_upload():
                 )
             )
             
-        time.sleep(1.5) # Gentle pause to respect Google API limits
+        time.sleep(5) # Gentle pause to ensure we stay under the 15 RPM Free Tier limit
         print(f"✅ Processed {min(i+BATCH_SIZE, len(documents))}/{len(documents)} chunks...")
 
     print(f"🚀 Uploading {len(points)} vectors to Qdrant...")
