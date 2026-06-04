@@ -80,7 +80,7 @@ def process_and_upload():
     )
     
     points = []
-    BATCH_SIZE = 100 # Maximum allowed by Gemini batch API
+    BATCH_SIZE = 50 # Reduced from 100 to avoid triggering burst limits
     print(f"🚀 Vectorizing {len(documents)} chunks using Google Gemini Batch API...")
     
     for i in range(0, len(documents), BATCH_SIZE):
@@ -111,15 +111,14 @@ def process_and_upload():
                     )
                 break
             elif response.status_code == 429:
-                sleep_time = (2 ** attempt) + 2
-                print(f"⚠️ Rate limit hit. Sleeping for {sleep_time}s...")
-                time.sleep(sleep_time)
+                print(f"⚠️ Rate limit hit. Google requires a cool-down. Sleeping for 60s... (Attempt {attempt+1}/{max_retries})")
+                time.sleep(60)
             else:
                 response.raise_for_status() # Raise other errors immediately
         else:
             raise Exception(f"Failed to embed batch after {max_retries} retries.")
             
-        time.sleep(2) # Safe pause between batches
+        time.sleep(10) # 10 second pause between batches to completely evade rate limits
         print(f"✅ Processed {min(i+BATCH_SIZE, len(documents))}/{len(documents)} chunks...")
 
     if not points:
