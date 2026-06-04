@@ -73,20 +73,20 @@ def process_and_upload():
 
     print(f"🚀 Vectorizing {len(documents)} chunks using Google Gemini Embeddings...")
     
-    # Create the collection with Google's embedding size (768)
+    # Create the collection with Google's gemini-embedding-2 size (3072)
     client.create_collection(
         collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
     )
     
     points = []
     print(f"🚀 Vectorizing {len(documents)} chunks using Google Gemini Embeddings (embedContent)...")
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key={GEMINI_API_KEY}"
     
     for i, doc in enumerate(documents):
         payload = {
-            "model": "models/text-embedding-004",
+            "model": "models/gemini-embedding-2",
             "content": {"parts": [{"text": doc}]}
         }
         

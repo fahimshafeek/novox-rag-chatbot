@@ -34,9 +34,9 @@ collection_name = "novox_knowledge"
 
 print("Using Google Gemini API for Embeddings...")
 def get_gemini_embedding(text: str) -> list[float]:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key={GEMINI_API_KEY}"
     payload = {
-        "model": "models/text-embedding-004",
+        "model": "models/gemini-embedding-2",
         "content": {"parts": [{"text": text}]}
     }
     response = requests.post(url, json=payload)
