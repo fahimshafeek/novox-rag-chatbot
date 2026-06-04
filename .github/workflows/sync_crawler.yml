@@ -28,8 +28,16 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install playwright
+        playwright install chromium
 
-    # Step 5: Run your pipeline and securely pipe your GitHub secrets into the script
+    # Step 5: Pre-download the FastEmbed ONNX models manually from Qdrant's GCS bucket to bypass Hugging Face's 429 rate limits
+    - name: Pre-download FastEmbed Model
+      run: |
+        mkdir -p ~/.local/share/fastembed/fast-bge-small-en-v1.5
+        wget -qO- https://storage.googleapis.com/qdrant-fastembed/fast-bge-small-en-v1.5.tar.gz | tar xz -C ~/.local/share/fastembed/fast-bge-small-en-v1.5
+
+    # Step 6: Run your pipeline and securely pipe your GitHub secrets into the script
     - name: Execute Crawler & Upload Vectors
       env:
         QDRANT_URL: ${{ secrets.QDRANT_URL }}
