@@ -1,6 +1,7 @@
 import json
 import asyncio
 import random
+from datetime import timedelta
 from crawlee import ConcurrencySettings
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
 from src.config import START_URL, MAX_REQUESTS
@@ -12,6 +13,8 @@ class NovoxCrawler:
             max_requests_per_crawl=MAX_REQUESTS,
             headless=True,
             browser_type='chromium',
+            ignore_http_error_status_codes=[401, 403, 429],
+            request_handler_timeout=timedelta(minutes=3),
             concurrency_settings=ConcurrencySettings(
                 min_concurrency=1,
                 desired_concurrency=1,
@@ -26,6 +29,13 @@ class NovoxCrawler:
         @self.crawler.router.default_handler
         async def request_handler(context: PlaywrightCrawlingContext) -> None:
             url = context.request.url
+            
+            # WAF/Firewall Interceptor: Prevent rapid-retry loops if StackCDN rate-limits Playwright
+            if context.response and context.response.status in [401, 403, 429]:
+                status = context.response.status
+                print(f"⚠️ CDN Rate Limit (Status {status}). Cooling down for 60 seconds to reset firewall...")
+                await asyncio.sleep(60)
+                raise Exception(f"Retrying after CDN cool-down (Status {status})")
             
             # Enqueue links before processing
             await context.enqueue_links()
