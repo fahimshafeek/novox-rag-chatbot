@@ -2,16 +2,17 @@ import json
 import asyncio
 import random
 from crawlee import ConcurrencySettings
-from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
+from crawlee.crawlers import BeautifulSoupCrawler, BeautifulSoupCrawlingContext
+from crawlee.http_clients import CurlImpersonateHttpClient
 from src.config import START_URL, MAX_REQUESTS
 from src.extractor import extract_and_tag
 
 class NovoxCrawler:
     def __init__(self):
-        self.crawler = PlaywrightCrawler(
+        self.crawler = BeautifulSoupCrawler(
+            http_client=CurlImpersonateHttpClient(impersonate="chrome120"),
             max_requests_per_crawl=MAX_REQUESTS,
-            headless=True,
-            browser_type='chromium',
+            ignore_http_error_status_codes=[401, 403, 429],
             concurrency_settings=ConcurrencySettings(
                 min_concurrency=1,
                 desired_concurrency=1,
@@ -24,19 +25,20 @@ class NovoxCrawler:
 
     def setup_routes(self):
         @self.crawler.router.default_handler
-        async def request_handler(context: PlaywrightCrawlingContext) -> None:
+        async def request_handler(context: BeautifulSoupCrawlingContext) -> None:
             url = context.request.url
+            status = context.http_response.status_code
+            
+            # WAF/Firewall Interceptor: Prevent rapid-retry loops if temporarily blocked
+            if status in [401, 403, 429]:
+                print(f"⚠️ WAF Blocked (Status {status}). Cooling down for 60 seconds to reset firewall...")
+                await asyncio.sleep(60)
+                raise Exception(f"Retrying after WAF cool-down (Status {status})")
 
-            # Enqueue links before processing
+            # CRITICAL: Enqueue links BEFORE decomposing the nav/header/footer tags
             await context.enqueue_links()
             
-            # Wait for any potential StackCDN JS challenges to complete
-            await context.page.wait_for_load_state('networkidle')
-            html_content = await context.page.content()
-            
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html_content, 'html.parser')
-            processed_page = extract_and_tag(url, soup)
+            processed_page = extract_and_tag(url, context.soup)
             
             if processed_page:
                 print(f"✅ [{processed_page['role'].upper()}] -> {url}")
@@ -50,6 +52,6 @@ class NovoxCrawler:
 
     async def start(self):
         self.setup_routes()
-        print(f"🚀 Starting Playwright crawl at: {START_URL}")
+        print(f"🚀 Starting BeautifulSoup crawl at: {START_URL}")
         await self.crawler.run([START_URL])
         print(f"\n🎉 Done! Check '{self.output_file}'.")
