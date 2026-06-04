@@ -77,6 +77,17 @@ def process_and_upload():
 
     # SMART INCREMENTAL UPDATE: Delete old data ONLY for pages we successfully scraped
     # This ensures if the crawler crashes halfway, we don't lose the rest of the database!
+    
+    # Qdrant requires a payload index to delete by payload filter
+    try:
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="url",
+            field_schema="keyword",
+        )
+    except Exception as e:
+        pass # Index already exists or other non-fatal error
+        
     unique_urls = list(set(meta["url"] for meta in metadata if "url" in meta))
     if unique_urls:
         print(f"🗑️ Deleting old data for {len(unique_urls)} updated pages to prevent duplicates...")
