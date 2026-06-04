@@ -34,6 +34,7 @@ jobs:
       env:
         QDRANT_URL: ${{ secrets.QDRANT_URL }}
         QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+        HF_ENDPOINT: https://hf-mirror.com
       run: |
         python main.py
         python upload.py
