@@ -119,6 +119,10 @@ def process_and_upload():
         if (i + 1) % 50 == 0:
             print(f"✅ Processed {i + 1}/{len(documents)} chunks...")
 
+    if not points:
+        print("⚠️ No valid chunks to upload. Skipping database update.")
+        return
+        
     print(f"🚀 Uploading {len(points)} vectors to Qdrant...")
     # Upsert all points into Qdrant
     client.upsert(
