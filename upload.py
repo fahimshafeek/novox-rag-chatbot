@@ -80,41 +80,44 @@ def process_and_upload():
     )
     
     points = []
-    BATCH_SIZE = 100 # Maximum allowed by Gemini batch API
-    for i in range(0, len(documents), BATCH_SIZE):
-        batch_docs = documents[i:i+BATCH_SIZE]
-        batch_meta = metadata[i:i+BATCH_SIZE]
+    print(f"🚀 Vectorizing {len(documents)} chunks using Google Gemini Embeddings (embedContent)...")
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
+    
+    for i, doc in enumerate(documents):
+        payload = {
+            "model": "models/text-embedding-004",
+            "content": {"parts": [{"text": doc}]}
+        }
         
-        requests_payload = [{"model": "models/text-embedding-004", "content": {"parts": [{"text": doc}]}} for doc in batch_docs]
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key={GEMINI_API_KEY}"
-        
-        # Add retry logic for robustness
-        for attempt in range(3):
-            try:
-                response = requests.post(url, json={"requests": requests_payload})
-                response.raise_for_status()
-                break
-            except Exception as e:
-                if attempt == 2:
-                    raise e
-                print(f"⚠️ Rate limited by Gemini API, retrying in 10s... (Attempt {attempt+1}/3)")
-                time.sleep(10)
-        
-        embeddings = [item["values"] for item in response.json().get("embeddings", [])]
-        
-        for j, emb in enumerate(embeddings):
-            payload_data = {"document": batch_docs[j]}
-            payload_data.update(batch_meta[j])
-            points.append(
-                PointStruct(
-                    id=str(uuid.uuid4()), 
-                    vector=emb, 
-                    payload=payload_data
+        # Exponential backoff for rate limits
+        max_retries = 5
+        for attempt in range(max_retries):
+            response = requests.post(url, json=payload)
+            if response.status_code == 200:
+                emb = response.json().get("embedding", {}).get("values", [])
+                
+                payload_data = {"document": doc}
+                payload_data.update(metadata[i])
+                points.append(
+                    PointStruct(
+                        id=str(uuid.uuid4()), 
+                        vector=emb, 
+                        payload=payload_data
+                    )
                 )
-            )
+                break
+            elif response.status_code == 429:
+                sleep_time = (2 ** attempt) + 2
+                print(f"⚠️ Rate limit hit. Sleeping for {sleep_time}s...")
+                time.sleep(sleep_time)
+            else:
+                response.raise_for_status() # Raise other errors immediately (like 404)
+        else:
+            raise Exception(f"Failed to embed document after {max_retries} retries.")
             
-        time.sleep(5) # Gentle pause to ensure we stay under the 15 RPM Free Tier limit
-        print(f"✅ Processed {min(i+BATCH_SIZE, len(documents))}/{len(documents)} chunks...")
+        if (i + 1) % 50 == 0:
+            print(f"✅ Processed {i + 1}/{len(documents)} chunks...")
 
     print(f"🚀 Uploading {len(points)} vectors to Qdrant...")
     # Upsert all points into Qdrant
