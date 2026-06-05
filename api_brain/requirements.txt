@@ -4,3 +4,4 @@ qdrant-client==1.18.0
 fastembed==0.8.0
 pydantic==2.13.4
 python-dotenv==1.0.1
+pymongo==4.7.0

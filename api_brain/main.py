@@ -8,8 +8,21 @@ import json
 import re
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from pymongo import MongoClient
+from datetime import datetime, timezone
+import uuid
+from typing import Optional
 
 load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+try:
+    if MONGO_URI:
+        mongo_client = MongoClient(MONGO_URI)
+        mongo_db = mongo_client["chat_logs_db"]
+        chat_logs_collection = mongo_db["EdtechBotChatLogs"]
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {e}")
 
 app = FastAPI(title="Novox EdTech Brain")
 
@@ -45,6 +58,7 @@ def get_gemini_embedding(text: str) -> list[float]:
 
 class QueryRequest(BaseModel):
     question: str
+    session_id: Optional[str] = None
 
 @app.get("/")
 def health_check():
@@ -63,6 +77,9 @@ def cosine_similarity(v1, v2):
 
 @app.post("/ask")
 def ask_bot(request: QueryRequest):
+    if not request.session_id:
+        request.session_id = str(uuid.uuid4())
+        
     try:
         query_vector = get_gemini_embedding(request.question)
     except Exception as e:
@@ -75,7 +92,23 @@ def ask_bot(request: QueryRequest):
     for cached_vector, cached_response in semantic_cache:
         if cosine_similarity(query_vector, cached_vector) > 0.94:
             print("🚀 Semantic Cache Hit! Saved 100% of LLM Tokens.")
-            return cached_response
+            
+            response_to_return = cached_response.copy()
+            response_to_return["session_id"] = request.session_id
+            
+            try:
+                chat_logs_collection.insert_one({
+                    "session_id": request.session_id,
+                    "question": request.question,
+                    "answer": response_to_return["answer"],
+                    "timestamp": datetime.now(timezone.utc),
+                    "sources": response_to_return.get("sources", []),
+                    "cache_hit": True
+                })
+            except Exception as e:
+                print(f"Failed to log chat to MongoDB: {e}")
+                
+            return response_to_return
 
     try:
         # =========================================================================
@@ -224,12 +257,30 @@ def ask_bot(request: QueryRequest):
     final_response = {
         "question": request.question,
         "answer": generated_answer,
+        "sources": unique_sources,
+        "session_id": request.session_id
+    }
+    
+    cache_response = {
+        "question": request.question,
+        "answer": generated_answer,
         "sources": unique_sources
     }
     
     # Save to semantic cache for future similar questions (keep max 1000 items to avoid memory leak)
     if len(semantic_cache) > 1000:
         semantic_cache.pop(0)
-    semantic_cache.append((query_vector, final_response))
+    semantic_cache.append((query_vector, cache_response))
+    
+    try:
+        chat_logs_collection.insert_one({
+            "session_id": request.session_id,
+            "question": request.question,
+            "answer": generated_answer,
+            "timestamp": datetime.now(timezone.utc),
+            "sources": unique_sources
+        })
+    except Exception as e:
+        print(f"Failed to log chat to MongoDB: {e}")
     
     return final_response
