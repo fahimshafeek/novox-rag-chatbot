@@ -28,7 +28,7 @@ app = FastAPI(title="Novox EdTech Brain")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
+    allow_origins=["https://novoxedtechllp.com", "https://www.novoxedtechllp.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -83,7 +83,8 @@ def ask_bot(request: QueryRequest):
     try:
         query_vector = get_gemini_embedding(request.question)
     except Exception as e:
-        return {"error": f"Failed to generate embedding: {str(e)}"}
+        print(f"Embedding error: {str(e)}")
+        return {"error": "Failed to generate embedding due to an internal server error."}
     
     # =========================================================================
     # OPTIMIZATION STAGE 1: SEMANTIC CACHE (0 Tokens Used)
@@ -132,7 +133,8 @@ def ask_bot(request: QueryRequest):
         context_string = "\n".join([item["text"] for item in retrieved_data])
         
     except Exception as e:
-        return {"error": f"Database search failed: {str(e)}"}
+        print(f"Database error: {str(e)}")
+        return {"error": "Database search failed due to an internal server error."}
 
     # =========================================================================
     # THE TWO-SHOT NUCLEAR PROMPT
@@ -247,10 +249,8 @@ def ask_bot(request: QueryRequest):
         # =========================================================================
                 
     except Exception as e:
-        error_msg = str(e)
-        if GEMINI_API_KEY:
-            error_msg = error_msg.replace(GEMINI_API_KEY, "********")
-        return {"error": f"LLM generation failed: {error_msg}"}
+        print(f"LLM generation error: {str(e)}")
+        return {"error": "LLM generation failed due to an internal server error."}
     
     unique_sources = [{"source": src} for src in list(set([item["source"] for item in retrieved_data if item["source"] != "local-test"]))] if 'retrieved_data' in locals() else []
     

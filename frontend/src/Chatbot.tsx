@@ -9,6 +9,7 @@ const Chatbot: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [isCentered, setIsCentered] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -56,7 +57,10 @@ const Chatbot: React.FC = () => {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ question: currentInput })
+        body: JSON.stringify({ 
+          question: currentInput,
+          ...(sessionId ? { session_id: sessionId } : {})
+        })
       });
       
       if (!response.ok) {
@@ -67,6 +71,10 @@ const Chatbot: React.FC = () => {
       
       if (data.error) {
         throw new Error(data.error);
+      }
+      
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
       }
       
       let botResponseText = data.answer;
