@@ -21,8 +21,8 @@ try:
         mongo_client = MongoClient(MONGO_URI)
         mongo_db = mongo_client["chat_logs_db"]
         chat_logs_collection = mongo_db["EdtechBotChatLogs"]
-except Exception as e:
-    print(f"Failed to connect to MongoDB: {e}")
+except Exception:
+    print("Failed to connect to MongoDB. Check your credentials and configuration.")
 
 app = FastAPI(title="Novox EdTech Brain")
 
@@ -82,8 +82,8 @@ def ask_bot(request: QueryRequest):
         
     try:
         query_vector = get_gemini_embedding(request.question)
-    except Exception as e:
-        print(f"Embedding error: {str(e)}")
+    except Exception:
+        print("Embedding error: An unexpected error occurred.")
         return {"error": "Failed to generate embedding due to an internal server error."}
     
     # =========================================================================
@@ -106,8 +106,8 @@ def ask_bot(request: QueryRequest):
                     "sources": response_to_return.get("sources", []),
                     "cache_hit": True
                 })
-            except Exception as e:
-                print(f"Failed to log chat to MongoDB: {e}")
+            except Exception:
+                print("Failed to log chat to MongoDB. Check your connection.")
                 
             return response_to_return
 
@@ -248,8 +248,8 @@ def ask_bot(request: QueryRequest):
             generated_answer = generated_answer[0].upper() + generated_answer[1:]
         # =========================================================================
                 
-    except Exception as e:
-        print(f"LLM generation error: {str(e)}")
+    except Exception:
+        print("LLM generation error: An unexpected error occurred.")
         return {"error": "LLM generation failed due to an internal server error."}
     
     unique_sources = [{"source": src} for src in list(set([item["source"] for item in retrieved_data if item["source"] != "local-test"]))] if 'retrieved_data' in locals() else []
@@ -280,7 +280,7 @@ def ask_bot(request: QueryRequest):
             "timestamp": datetime.now(timezone.utc),
             "sources": unique_sources
         })
-    except Exception as e:
-        print(f"Failed to log chat to MongoDB: {e}")
+    except Exception:
+        print("Failed to log chat to MongoDB. Check your connection.")
     
     return final_response

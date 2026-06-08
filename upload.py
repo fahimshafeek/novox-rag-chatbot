@@ -21,10 +21,10 @@ try:
         url=QDRANT_URL,
         api_key=QDRANT_API_KEY,
     )
-except Exception as e:
+except Exception:
     print(f"❌ Failed to connect to Qdrant at {QDRANT_URL}.")
     print("Please double check that your QDRANT_URL and QDRANT_API_KEY secrets in GitHub Actions are correct.")
-    raise e
+    raise Exception("Qdrant connection failed.")
 
 # Removed FastEmbed initialization. Using Google Gemini API.
 def chunk_text(text, chunk_size=150):
@@ -69,11 +69,11 @@ def process_and_upload():
             )
         else:
             print(f"🔄 Database exists. Preparing for incremental update...")
-    except Exception as e:
+    except Exception:
         print("\n❌ ERROR: Failed to communicate with Qdrant.")
         print("This usually happens if your QDRANT_URL or QDRANT_API_KEY is incorrect or outdated.")
         print("Please check your GitHub Secrets to ensure you are using the correct Qdrant Cloud URL.\n")
-        raise e
+        raise Exception("Failed to prepare database.")
 
     # SMART INCREMENTAL UPDATE: Delete old data ONLY for pages we successfully scraped
     # This ensures if the crawler crashes halfway, we don't lose the rest of the database!
@@ -140,7 +140,7 @@ def process_and_upload():
                 print(f"⚠️ Rate limit hit. Google requires a cool-down. Sleeping for 60s... (Attempt {attempt+1}/{max_retries})")
                 time.sleep(60)
             else:
-                response.raise_for_status() # Raise other errors immediately
+                raise Exception(f"HTTP Error {response.status_code} occurred while communicating with Gemini API.")
         else:
             raise Exception(f"Failed to embed batch after {max_retries} retries.")
             
